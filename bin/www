@@ -1,0 +1,172 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var app = require('../app');
+var debug = require('debug')('naftal:server');
+var http = require('http');
+
+/**
+ * Get port from environment and store in Express.
+ */
+
+var port = normalizePort(process.env.PORT || '3000');
+app.set('port', port);
+
+/**
+ * Create HTTP server.
+ */
+
+var server = http.createServer(app);
+
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+
+server.listen(port);
+server.on('error', onError);
+server.on('listening', onListening);
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  var bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+
+function onListening() {
+  var addr = server.address();
+  var bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port;
+  debug('Listening on ' + bind);
+}
+//Mysql
+var mysql=require('mysql');
+var Config={
+    host  :'localhost',
+    user:'root',
+    password:'root',
+    database :'salat'
+};
+var myconnection =mysql.createConnection(Config);
+
+myconnection.connect();
+//socket.io
+var io=require('socket.io')(server);
+io.on('connection',function (socket) {
+    console.log('user connected...');
+
+    socket.on('isexist', function(name,password){
+
+        console.log(name,password);
+        myconnection.query("SELECT * from login WHERE name ='"+name+"' AND password='"+password+"'" ,function (err,rows,fields) {
+            if(!err){
+                if(rows.length>0){
+                    socket.emit('Respanse_ifExist', rows);
+                  //  socket.emit("Response_IsExist",rows1);
+                    console.log(rows);
+                }else {
+                    var error ={myorder:'station is not valid'}
+                    socket.emit('Respanse_ifExist', rows);
+                     console.log(rows);
+
+                }
+            }else {
+                var error ={myorder:'error cannot execte query'}
+                io.emit('connection', err);
+
+            }
+
+         });
+
+
+    });
+
+    socket.on('timesalat', function(jour){
+
+        console.log('timesalat..');
+        myconnection.query("SELECT * FROM timesalat WHERE jour ='"+jour+"'" ,function (err,rows,fields) {
+            if(!err){
+                if(rows.length>0){
+                    socket.emit('Respanse_iffiest', rows);
+                    //  socket.emit("Response_IsExist",rows1);
+                    console.log(rows);
+                }else {
+                    var error ={myorder:'station is not valid'}
+                    socket.emit('Respanse_iffiest', rows);
+                    console.log(rows);
+
+                }
+            }else {
+                var error ={myorder:'error cannot execte query'}
+                io.emit('connection', err);
+
+            }
+
+        });
+
+
+    });
+
+
+
+    socket.on('disconnect',function () {
+        console.log('user disconnected !');
+
+    });
+    socket.on('chat message', function(usermsg){
+        console.log(usermsg.user+" : "+usermsg.msg);
+        io.emit('chat message', usermsg.user+" : "+usermsg.msg);
+
+    });
+
+
+});
